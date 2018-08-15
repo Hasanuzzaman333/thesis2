@@ -1,0 +1,70 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    
+</head>
+<body >
+<h1>Hello, there</h1>
+
+<p id="demo"></p>
+    Query: <br>    
+    <p id="testField1"></p>
+    <br>
+    Result:<br>
+    <p id="testField2"></p>
+<button onclick="NextSymptoms();">NextSymptoms</button>
+<button onclick="PredictDisease();">Predict</button>
+</body>
+</html>
+
+<script>
+
+    function NextSymptoms() {
+
+        var state = { Symptoms: ['Fever', 'Headache', 'Loss of appetite', 'Rash'], NotSymptoms: ["Pain"], Age: 10, Name: "Ashiqur Rahman" };
+        document.getElementById('testField1').innerHTML = state.Symptoms;
+        $.ajax({
+            url: 'http://localhost:57716/api/symptom/next/',
+            dataType: "json",
+            type: "GET", 
+            contentType: 'application/json; charset=utf-8', //define a contentType of your request
+            data: { state: JSON.stringify(state) },
+            success: function (data) {
+                document.getElementById('testField2').innerHTML = JSON.stringify(data);
+                console.log(data);
+            },
+            error: function (xhr) {
+                alert('error');
+            }
+        });
+    }
+
+    function PredictDisease() {
+
+        var symptoms = ['Fever', 'Headache', 'Loss of appetite', 'Rash'];
+        document.getElementById('testField1').innerHTML = symptoms;
+        $.ajax({
+            url: 'http://localhost:57716/api/estimate/prob/',
+            dataType: "json",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8', //define a contentType of your request
+            data: { symptoms: JSON.stringify(symptoms) },
+            success: function (data) {
+                document.getElementById('testField2').innerHTML = JSON.stringify(data);
+                console.log(data);
+            },
+            error: function (xhr) {
+                alert('error');
+            }
+        });
+    }
+
+
+</script>
+
+

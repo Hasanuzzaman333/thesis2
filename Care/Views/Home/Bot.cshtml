@@ -1,0 +1,537 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Smileybot</title>
+
+    <style>
+        body{
+            min-width: 525px; 
+        }
+
+        .chat-window>.question, .chat-window>.reply{
+            margin-bottom: 10px;
+            max-width: 500px;
+            min-width: 400px;
+        }
+
+        .chat-window>.question{
+            text-align: left;
+            float: left;
+            clear: both;
+    
+        }
+        .chat-window>.reply{
+            text-align: right;
+            float: right;
+            clear: both;
+        }
+
+        #bottomDiv{
+            position: fixed;
+            bottom:0%;
+            width: 100%
+        }
+
+        /*Modal styles*/
+        /**********************************************/
+
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaaaaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    /**********************************************/
+    </style>
+
+    
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+
+<body onload="init();">
+<br><br>
+    
+<div id="myModal" class="modal">
+
+    <!-- Modal content -->
+    <div class="modal-content">
+        <span class="close" onclick="closeModal();">&times;</span>
+        <pre id="modalinfo"></pre>
+    </div>
+        
+</div>
+    
+<div class="container">
+    <div class="row">
+            
+        <div class="col col-md-2 col-lg-2">
+                
+        </div>
+        <div class="col col-lg-8 col-sm-12">
+            <div class="chat-window" id="chat-window">
+                    
+                    
+
+            </div>
+        </div>
+        <div class="col col-md-2 ol-lg-2"></div>
+            
+        <div style="height: 200px;" id="bottom" class="col col-lg-12"></div>
+    </div>
+</div>
+       
+<div id="bottomDiv" class="text-center">
+    <button onclick="testAutomation();" class="btn btn-lg btn-primary">Test</button>
+    <button onclick="intro();" class="btn btn-lg btn-primary">Intro</button>
+    <button onclick="predictDisease();" class="btn btn-lg btn-success">Predict</button>
+    <br>
+    <button onclick="init();" class="btn btn-sm btn-danger">Start Over</button>
+</div>
+
+</body>
+
+
+</html>
+
+<script type="text/javascript">
+    
+    var patient = {
+        Symptoms: [],
+        NotSymptoms: [],
+        Name: "",
+        Age: 0
+    };
+
+    function init() {
+        patient.Name = "";
+        patient.Age = 0;
+        patient.Symptoms = [];
+        patient.NotSymptoms = [];
+        document.getElementById('chat-window').innerHTML = "";
+    }
+
+    let diseaseProb = {
+        Disease: {
+            Name: "",
+            Symptoms: []
+        },
+        Probability: 0
+    };
+
+
+    function setNameAndAge(event) {
+        patient.Name = document.getElementById('usrName').value;
+        patient.Age = document.getElementById('usrAge').value;
+        event.target.disabled = true;
+        event.target.style.visibility = 'hidden';
+
+        continueConversation();
+    }
+
+    function setSymptomsAndNotSymptoms(event) {
+
+
+        event.target.disabled = true;
+        event.target.style.visibility = 'hidden';
+
+        continueConversation();
+    }
+
+    let nextSymptoms
+    function continueConversation() {
+
+        fetchNextSymptoms();
+
+    }
+
+    let diag = 0;
+    let botDiag = ['Which symptoms describe(s) you the most?', 'Do you have any of the following symptoms?'];
+
+    function botSays(data) {
+        let d = createParentDiv(0);
+        let p = createPanel(true);
+
+        diag = diag % botDiag.length;
+        fillPanel(p, botDiag[diag], createListGroup(data));
+        diag++;
+        appendChildToParent(d, p);
+
+
+        appendChildToParent(document.getElementById('chat-window'), d);
+    }
+
+    function patientSays(data) {
+        let d = createParentDiv(1);
+        let p = createPanel(false);
+
+        fillPanel(p, 'Choose Symptom(s)', createManyCheckBox(data));
+        appendChildToParent(d, p);
+
+        let nextBtn = createNextButton();
+        appendChildToParent(d, nextBtn);
+
+        appendChildToParent(document.getElementById('chat-window'), d);
+
+        document.getElementById('bottom').scrollIntoView();
+    }
+
+    function nextBtnAction(event) {
+        // let parent = event.target.parentElement;
+
+        let checks = document.querySelectorAll('input[fresh=true]');
+
+        checks.forEach(element => {
+
+            element.removeAttribute('fresh');
+            if (element.checked) {
+                patient.Symptoms.push(element.value);
+            }
+            else {
+                patient.NotSymptoms.push(element.value);
+            }
+        });
+
+        continueConversation();
+    }
+
+    let urlPrefix = window.location.protocol + '//' + window.location.hostname;
+
+    if (window.location.port != 0 || window.location.port != null) urlPrefix += ':'+window.location.port;
+
+    function predictDisease() {
+        console.log(urlPrefix + '/api/estimate/prob/');
+        var symptoms = patient.Symptoms;
+
+        $.ajax({
+            url: urlPrefix + '/api/estimate/prob/',
+            dataType: "json",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8', //define a contentType of your request
+            data: { symptoms: JSON.stringify(symptoms) },
+            success: function (data) {
+                console.log(data);
+                showModal(data[0]);
+            },
+            error: function (xhr) {
+                alert('Error');
+            }
+        });
+    }
+
+    function fetchNextSymptoms() {
+
+        var state = { Symptoms: patient.Symptoms, NotSymptoms: patient.NotSymptoms };
+
+        $.ajax({
+            url: urlPrefix + '/api/symptom/next/',
+            dataType: "json",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8',
+            data: { state: JSON.stringify(state) },
+            success: function (data) {
+                readyBotElements(data);
+            },
+            error: function (xhr) {
+                alert('Error fetching symptoms');
+            }
+        });
+    }
+
+
+    function readyBotElements(data) {
+
+        $.ajax({
+            url: urlPrefix + '/api/symptom/query/',
+            dataType: "json",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8',
+            data: { symptom: JSON.stringify(data) },
+            success: function (newData) {
+                botSays(newData);
+                patientSays(data);
+            },
+            error: function (xhr) {
+                alert('Error fetching symptom query');
+            }
+        });
+    }
+
+
+
+    function intro() {
+        let d = createParentDiv(0);
+        let p = createPanel(true);
+
+        fillPanel(p, 'Hey! I am Smileybot. I can help you detecting your disease. Please tell me your name and age.', "");
+
+        appendChildToParent(d, p);
+
+
+        appendChildToParent(document.getElementById('chat-window'), d);
+
+        d = createParentDiv(1);
+        p = createPanel(false);
+
+        fillPanel(p, 'Introduction', createIntroField());
+
+        appendChildToParent(d, p);
+
+
+        appendChildToParent(document.getElementById('chat-window'), d);
+
+
+        document.getElementById('bottom').scrollIntoView();
+    }
+
+
+
+    // Get the modal
+
+
+    function showModal(disease) {
+
+        var modalinfo = document.getElementById("modalinfo");
+
+        var modal = document.getElementById('myModal');
+        modal.style.display = "block";
+        let str = '<b>Name: </b>' + patient.Name + "\n<b>Age: </b>" + patient.Age + "\n<b>Patient Symptoms:</b>\n";
+
+        patient.Symptoms.forEach(element => {
+            str += "\t" + element + "\n";
+        });
+
+        str += "<b>Patient Non Symptoms: </b>\n";
+        patient.NotSymptoms.forEach(element => {
+            str += "\t" + element + "\n";
+        });
+
+        str += "<b>Predicted Disease: </b>" + disease.Disease.Name + "\n";
+
+        str += "<b>Disease Probability: </b>" + disease.Probability + "\n";
+
+        modalinfo.innerHTML = str;
+    }
+
+    function closeModal() {
+        var modal = document.getElementById('myModal');
+        modal.style.display = "none";
+    }
+
+    const parentDivType = ['question', 'reply'];
+    const parentDivTypeImg = ['/images/icon-bot.png', '/images/icon-human.png'];
+
+    const panelClasses = ['panel-default', 'panel-info'];
+
+    function createDiv() {
+        return document.createElement('div');
+    }
+
+    function createParentDiv(type) {
+        let parentDiv = createDiv();
+        parentDiv.setAttribute('class', parentDivType[type]);
+
+        let img = document.createElement('img');
+        img.setAttribute('width', '50px');
+        img.setAttribute('src', parentDivTypeImg[type]);
+
+        parentDiv.appendChild(img);
+
+        return parentDiv;
+    }
+
+    function createPanel(bot) {
+
+        let panel = createDiv();
+        panel.setAttribute('class', 'panel');
+        if (bot) {
+            panel.setAttribute('class', panelClasses[0]);
+        }
+        else {
+            panel.setAttribute('class', panelClasses[1]);
+        }
+
+        let child1 = createDiv();
+        child1.setAttribute('class', 'panel-heading');
+        panel.appendChild(child1);
+        let child2 = createDiv();
+        child2.setAttribute('class', 'panel-body');
+        panel.appendChild(child2);
+
+        return panel;
+    }
+
+    function appendChildToParent(parent, child) {
+        parent.appendChild(child);
+    }
+
+    function fillPanel(pan, headText, bodyText) {
+        pan.childNodes[0].innerHTML = headText;
+        pan.childNodes[1].innerHTML = bodyText;
+    }
+
+
+
+
+
+    function createForm(data) {
+        let form = document.createElement('form');
+
+        let innerText = ""
+        data.forEach(element => {
+            innerText += createCheckBox(element, element);
+        });
+
+        form.innerHTML = innerText;
+
+        return form;
+    }
+
+    function createCheckBox(text, val) {
+        return '<label>' +
+            '<input type="checkbox" value="' + val + '" fresh="true">' +
+            text +
+            '</label>';
+    }
+
+
+
+    function createManyCheckBox(symps) {
+        let checks = "";
+        symps.forEach(element => {
+            checks += createCheckBox(element, element);
+        });
+
+        return checks;
+    }
+
+
+    function createManyCheckBoxInList(symps) {
+        let checks = []
+        symps.forEach(element => {
+            checks.push(createCheckBox(element, element));
+        });
+
+        return createListGroup(checks);
+    }
+
+    function createListGroup(data) {
+        let str = '<ul class="list-group">';
+        data.forEach(element => {
+            str += '<li class="list-group-item list-group-item-action">' + element + '</li>';
+        });
+        str += '</ul>';
+
+        return str
+    }
+
+    function createNextButton() {
+        let btn = document.createElement('button');
+        btn.setAttribute('onclick', 'nextBtnAction(event);')
+        btn.setAttribute('class', 'btn btn-primary')
+        btn.innerHTML = "Next";
+        return btn;
+    }
+
+    function createIntroField() {
+
+        let str = '<div class="form-group">' +
+            '<label for="usr">Name:</label>' +
+            '<input type="text" class="form-control" id="usrName">' +
+            '</div>' +
+            '<div class="form-group">' +
+            '<label for="pwd">Age:</label>' +
+            '<input type="number" min="1" max="200" class="form-control" id="usrAge">' +
+            '</div>';
+        str += '<input type="submit" class="btn btn-primary" onclick="setNameAndAge(event);">';
+
+        return str;
+    }
+
+    let x = true;
+    function testAutomation() {
+        let type = x ? 0 : 1;
+        let d = createParentDiv(type);
+        let p = createPanel(x);
+
+        fillPanel(p);
+
+        appendChildToParent(d, p);
+
+
+        appendChildToParent(document.getElementById('chat-window'), d);
+
+        x = !x;
+        document.getElementById('bottom').scrollIntoView();
+    }
+
+    {/* <select name="cars" multiple>
+  <option value="volvo">Volvo</option>
+  <option value="saab">Saab</option>
+  <option value="opel">Opel</option>
+  <option value="audi">Audi</option>
+</select>
+
+<div class="checkbox">
+  <label><input type="checkbox" value="">Option 1</label>
+</div>
+<div class="checkbox">
+  <label><input type="checkbox" value="">Option 2</label>
+</div>
+<div class="checkbox disabled">
+  <label><input type="checkbox" value="" disabled>Option 3</label>
+</div> 
+
+<div class="form-group">
+      <select class="form-control" id="sel1">
+        <option>1</option>
+        <option>2</option>
+        <option>3</option>
+        <option>4</option>
+      </select>
+    </div>
+*/}
+
+</script>
